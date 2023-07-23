@@ -288,13 +288,24 @@ class ADRAM_dataloader_multi(ADRAM_dataloader_clean):
         assert what == IM or what == SK, "CMT_dataloader.traverse: what must be IM({})/SK({}), but get {}"\
             .format(IM, SK, what)
         rets_ims = []; rets_ids = []; paths = []
+
         for i, x in enumerate(self.skim[what]):
             if i % skip != 0: continue
             x = expand3(x)
-            paths.append(self.skim_paths[what][i])
-            x = data_afg_ssl.trans_noaug(x)
-            rets_ims.append(x)
-            rets_ids.append(self.fg_label[what][i])
+            path = self.skim_paths[what][i]
+            label = self.fg_label[what][i]
+
+            if self.vanilla:
+                paths.append(path)
+                rets_ims.append(data_afg_ssl.trans_noaug(x))
+                rets_ids.append(label)
+            else:
+                crops = list(data_afg_ssl.trans_noaug_crop(x))
+                n_crop = len(crops)
+                rets_ims += crops
+                paths += [path] * n_crop
+                rets_ids += [label] * n_crop
+
             if len(rets_ims) == batch_size:
                 yield torch.stack(rets_ims, dim=0), torch.tensor(rets_ids), paths
                 rets_ims = []; rets_ids = []; paths = []
